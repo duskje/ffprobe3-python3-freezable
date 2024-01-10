@@ -164,6 +164,7 @@ import json
 import os
 import re
 import subprocess
+import sys
 
 from collections.abc import Mapping
 from .exceptions import *
@@ -338,11 +339,23 @@ def probe(media_filename, *,
     split_cmdline.append(media_filename)
 
     try:
+        env = dict(os.environ)
+
+        if getattr(sys, 'frozen', False):
+            lp_key = 'LD_LIBRARY_PATH'
+            lp_orig = env.get(lp_key + '_ORIG')
+
+            if lp_orig is not None:
+                env[lp_key] = lp_orig
+            else:
+                env.pop(lp_key, None)
+
         # https://docs.python.org/3/library/subprocess.html#subprocess.Popen
         proc = subprocess.Popen(split_cmdline,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
-                universal_newlines=True)
+                universal_newlines=True,
+                env=env)
     # We catch the following plausible exceptions specifically,
     # in case we decide that we want to process any of them specially.
     except FileNotFoundError as e:
